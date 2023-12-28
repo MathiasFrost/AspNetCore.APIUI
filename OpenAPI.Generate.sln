@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAPI.Generate.Sandbox", "OpenAPI.Generate.Sandbox\OpenAPI.Generate.Sandbox.csproj", "{43A60A33-E74F-459A-A55C-83EC9199CED0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenAPI.Generate", "OpenAPI.Generate\OpenAPI.Generate.csproj", "{59B4F230-FB0A-4497-BC21-CD1FB85BAA2D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFolder", "SolutionFolder", "{38D568B9-1F70-4CD5-89E5-1CF5A765D09B}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		OpenAPI.Generate.sln.DotSettings = OpenAPI.Generate.sln.DotSettings
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{43A60A33-E74F-459A-A55C-83EC9199CED0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43A60A33-E74F-459A-A55C-83EC9199CED0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43A60A33-E74F-459A-A55C-83EC9199CED0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43A60A33-E74F-459A-A55C-83EC9199CED0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59B4F230-FB0A-4497-BC21-CD1FB85BAA2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59B4F230-FB0A-4497-BC21-CD1FB85BAA2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59B4F230-FB0A-4497-BC21-CD1FB85BAA2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59B4F230-FB0A-4497-BC21-CD1FB85BAA2D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
