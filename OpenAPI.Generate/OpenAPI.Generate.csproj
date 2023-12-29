@@ -2,12 +2,48 @@
 
 	<PropertyGroup>
 		<TargetFramework>net7.0</TargetFramework>
-		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<OutputType>library</OutputType>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+		<Platforms>AnyCPU</Platforms>
+		<Configurations>Debug;Release</Configurations>
+
+		<PackageId>OpenAPI.Generate</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>Mathias Amandus Andvik Løken</Authors>
+		<PackageTags>C#;CSharp;ASP.NET Core;OpenAPI</PackageTags>
+		<Description>NuGet for a lightweight OpenAPI generator and UI for ASP.NET Core Web APIs</Description>
+
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/MathiasFrost/OpenAPI.Generate</RepositoryUrl>
+
+		<!--		<PackageIcon>logo.png</PackageIcon>-->
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<!--		<None Include="..\logo.png" Pack="true" Visible="false" PackagePath="" />-->
+		<None Include="..\README.md" Pack="true" Visible="false" PackagePath="" />
+		<None Include="..\LICENSE" Pack="true" Visible="false" PackagePath="" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Resources\**\*">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	
 	<ItemGroup>
 		<PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
 	</ItemGroup>
 	
+	<ItemGroup>
+	  <_ContentIncludedByDefault Remove="Resources\_app\version.json" />
+	</ItemGroup>
+
 </Project>

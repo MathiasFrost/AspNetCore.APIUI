@@ -2,41 +2,18 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
+using OpenAPI.Generate.Models;
+using Path = OpenAPI.Generate.Models.Path;
 
 namespace OpenAPI.Generate;
 
+/// <summary> TODOC </summary>
 internal static class OpenApiTypeHelper
 {
-    private sealed record class SchemaDefinition(
-        string? Type,
-        string? Format = null,
-        string? Ref = null,
-        SchemaDefinition? Items = null,
-        SchemaDefinition? AdditionalProperties = null,
-        bool IsDynamic = false)
-    {
-        public JsonNode? GetAdditionalProperties()
-        {
-            if (AdditionalProperties == null) return null;
-            if (IsDynamic) return true;
-            string format = Format == null ? String.Empty : $", \"format\": \"{Format}\"";
-            return JsonNode.Parse($"{{\"type\": \"{AdditionalProperties.Type}\"{format}}}");
-        }
+    /// <summary> TODOC </summary>
+    public static Components Components { get; } = new() { Schemas = new Dictionary<string, Schema>() };
 
-        public Schema? GetItemsSchema()
-        {
-            if (Items == null) return null;
-            return new Schema {
-                Type = Items.Type,
-                Format = Items.Format,
-                Ref = Items.Ref,
-                Properties = null,
-                AdditionalProperties = Items.GetAdditionalProperties(),
-                Items = Items.GetItemsSchema()
-            };
-        }
-    }
-
+    /// <summary> TODOC </summary>
     private static SchemaDefinition? GetSchemaDefinition(Type type)
     {
         TypeCode code = Type.GetTypeCode(type);
@@ -50,9 +27,18 @@ internal static class OpenApiTypeHelper
                 if (IsDictionary(type, out Type? generic))
                     return new SchemaDefinition("object", null, null, null, generic == null ? null : GetSchemaDefinition(generic), generic == null);
 
-                // ReSharper disable once ConvertIfStatementToReturnStatement
                 if (IsArray(type, out generic))
                     return new SchemaDefinition("array", null, null, GetSchemaDefinition(generic!));
+
+                if (typeof(DateOnly).IsAssignableFrom(type))
+                    return new SchemaDefinition("string", "date");
+
+                if (typeof(TimeOnly).IsAssignableFrom(type))
+                    return new SchemaDefinition("string", "time");
+
+                // ReSharper disable once ConvertIfStatementToReturnStatement
+                if (typeof(TimeSpan).IsAssignableFrom(type))
+                    return new SchemaDefinition("string", "timespan");
 
                 return new SchemaDefinition(null, null, GetOrCreateSchema(type));
             case TypeCode.Boolean:
@@ -88,8 +74,7 @@ internal static class OpenApiTypeHelper
         }
     }
 
-    public static Components Components { get; } = new() { Schemas = new Dictionary<string, Schema>() };
-
+    /// <summary> TODOC </summary>
     private static string GetOrCreateSchema(Type type)
     {
         var name = $"{Char.ToLower(type.Name[0])}{type.Name[1..]}";
@@ -101,6 +86,7 @@ internal static class OpenApiTypeHelper
                 Format = null,
                 Ref = null,
                 Properties = type.GetProperties()
+                    .Where(info => info.PropertyType != type) // No circles
                     .ToDictionary(static info => info.Name, static info =>
                     {
                         SchemaDefinition? definition = GetSchemaDefinition(info.PropertyType);
@@ -119,6 +105,7 @@ internal static class OpenApiTypeHelper
         return $"#/components/schemas/{name}";
     }
 
+    /// <summary> TODOC </summary>
     private static Parameter[] GetParameters(List<ParameterInfo> routeParams, List<ParameterInfo> queryParams)
     {
         var res = new List<Parameter>();
@@ -168,13 +155,14 @@ internal static class OpenApiTypeHelper
         return res.ToArray();
     }
 
+    /// <summary> TODOC </summary>
     private static Dictionary<string, Response> GetResponse(MethodInfo method)
     {
         string? contentType = null;
         Dictionary<string, Property>? properties = null;
         SchemaDefinition? definition = null;
 
-        if (typeof(void) == method.ReturnType || (method.ReturnType.GenericTypeArguments.Length == 0 && typeof(Task).IsAssignableFrom(method.ReturnType)))
+        if (typeof(void) == method.ReturnType || (method.ReturnType.GetGenericArguments().Length == 0 && typeof(Task).IsAssignableFrom(method.ReturnType)))
             goto ret;
 
         Type unwrapped = UnwrapActionResult(UnwrapTask(method.ReturnType));
@@ -215,7 +203,7 @@ internal static class OpenApiTypeHelper
             else if (!typeof(IActionResult).IsAssignableFrom(unwrapped)) // Action results are special. If we missed one we have to ignore
             {
                 definition = GetSchemaDefinition(unwrapped);
-                if (definition != null) contentType = definition.Type == "object" ? "application/json" : "text/plain";
+                if (definition != null) contentType = definition.Type is "object" or "array" ? "application/json" : "text/plain";
             }
         }
 
@@ -246,30 +234,13 @@ internal static class OpenApiTypeHelper
         };
     }
 
+    /// <summary> TODOC </summary>
     private static RequestBody GetFormRequestBody(IEnumerable<ParameterInfo> parameters)
     {
         var encoding = new Dictionary<string, Encoding>();
         var properties = new Dictionary<string, Property>();
 
-        void GetProperties(bool first, string prefix, IEnumerable<(string Name, Type Type)> ts)
-        {
-            foreach ((string Name, Type Type) t in ts)
-            {
-                SchemaDefinition? definition = GetSchemaDefinition(t.Type);
-                if (definition?.Type == "object")
-                {
-                    GetProperties(prefix == String.Empty, $"{t.Name}.", t.Type.GetProperties().Select(static prop => (prop.Name, prop.PropertyType)));
-                }
-                else if (definition != null)
-                {
-                    string name = first ? t.Name : $"{prefix}{t.Name}";
-                    encoding.Add(name, new Encoding { Style = "form" });
-                    properties.Add(name, new Property { Format = definition.Format, Type = definition.Type, Nullable = IsNullable(t.Type) });
-                }
-            }
-        }
-
-        GetProperties(true, String.Empty, parameters.Select(static info => (info.Name!, info.ParameterType)));
+        Props(true, String.Empty, parameters.Select(static info => (info.Name!, info.ParameterType)));
 
         return new RequestBody {
             Content = new Dictionary<string, Content> {
@@ -288,8 +259,27 @@ internal static class OpenApiTypeHelper
                 }
             }
         };
+
+        void Props(bool first, string prefix, IEnumerable<(string Name, Type Type)> ts)
+        {
+            foreach ((string Name, Type Type) t in ts)
+            {
+                if (Type.GetTypeCode(t.Type) == TypeCode.Object)
+                {
+                    Props(prefix == String.Empty, $"{t.Name}.", t.Type.GetProperties().Select(static prop => (prop.Name, prop.PropertyType)));
+                }
+                else
+                {
+                    SchemaDefinition? definition = GetSchemaDefinition(t.Type);
+                    string name = first ? t.Name : $"{prefix}{t.Name}";
+                    encoding.Add(name, new Encoding { Style = "form" });
+                    properties.Add(name, new Property { Format = definition?.Format, Type = definition?.Type, Nullable = IsNullable(t.Type) });
+                }
+            }
+        }
     }
 
+    /// <summary> TODOC </summary>
     private static RequestBody GetBodyRequestBody(IReadOnlyCollection<ParameterInfo> parameters)
     {
         // FromBody only makes sense with one param
@@ -316,6 +306,7 @@ internal static class OpenApiTypeHelper
         };
     }
 
+    /// <summary> TODOC </summary>
     private static bool IsNullable(Type type)
     {
         if (Nullable.GetUnderlyingType(type) != null) return true;
@@ -333,11 +324,13 @@ internal static class OpenApiTypeHelper
         return flags?.Length > 0 && flags[0] == 2;
     }
 
+    /// <summary> TODOC </summary>
     private static string GetControllerName(MemberInfo controller, string template) =>
         controller.Name.EndsWith("Controller") && template.Contains("[controller]")
             ? controller.Name[..^10]
             : controller.Name;
 
+    /// <summary> TODOC </summary>
     public static string GetEndpoint(MemberInfo controller, string template, MemberInfo method, string? methodTemplate)
     {
         var replacements = new Dictionary<string, string> {
@@ -355,6 +348,7 @@ internal static class OpenApiTypeHelper
         return res.StartsWith('/') ? res : "/" + res;
     }
 
+    /// <summary> TODOC </summary>
     public static Path GetPath(MemberInfo controller, string template, MethodInfo method, string? methodTemplate)
     {
         var formParams = new List<ParameterInfo>();
@@ -420,18 +414,21 @@ internal static class OpenApiTypeHelper
         };
     }
 
+    /// <summary> TODOC </summary>
     private static Type UnwrapTask(Type type)
     {
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>)) return type.GetGenericArguments()[0];
         return type;
     }
 
+    /// <summary> TODOC </summary>
     private static Type UnwrapActionResult(Type type)
     {
         if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ActionResult<>)) return type.GetGenericArguments()[0];
         return type;
     }
 
+    /// <summary> TODOC </summary>
     private static bool UnwrapValueType(Type type, out IEnumerable<FieldInfo>? items)
     {
         items = null;
@@ -459,6 +456,7 @@ internal static class OpenApiTypeHelper
         return true;
     }
 
+    /// <summary> TODOC </summary>
     private static bool IsDictionary(Type type, out Type? generic)
     {
         generic = null;
@@ -483,6 +481,7 @@ internal static class OpenApiTypeHelper
                     || @interface.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>)));
     }
 
+    /// <summary> TODOC </summary>
     private static bool IsArray(Type type, out Type? generic)
     {
         generic = null;
@@ -493,12 +492,44 @@ internal static class OpenApiTypeHelper
         return type.IsArray || typeof(IEnumerable).IsAssignableFrom(type);
     }
 
-    public static bool UnwrapIAsyncEnumerable(Type type, out Type? generic)
+    /// <summary> TODOC </summary>
+    private static bool UnwrapIAsyncEnumerable(Type type, out Type? generic)
     {
         generic = null;
         if (type.GenericTypeArguments.Length <= 0) return false;
 
         generic = type.GenericTypeArguments[0];
         return type.IsGenericType && typeof(IAsyncEnumerable<>).IsAssignableFrom(type.GetGenericTypeDefinition());
+    }
+
+    /// <summary> TODOC </summary>
+    private sealed record class SchemaDefinition(
+        string? Type,
+        string? Format = null,
+        string? Ref = null,
+        SchemaDefinition? Items = null,
+        SchemaDefinition? AdditionalProperties = null,
+        bool IsDynamic = false)
+    {
+        public JsonNode? GetAdditionalProperties()
+        {
+            if (AdditionalProperties == null) return null;
+            if (IsDynamic) return true;
+            string format = Format == null ? String.Empty : $", \"format\": \"{Format}\"";
+            return JsonNode.Parse($"{{\"type\": \"{AdditionalProperties.Type}\"{format}}}");
+        }
+
+        public Schema? GetItemsSchema()
+        {
+            if (Items == null) return null;
+            return new Schema {
+                Type = Items.Type,
+                Format = Items.Format,
+                Ref = Items.Ref,
+                Properties = null,
+                AdditionalProperties = Items.GetAdditionalProperties(),
+                Items = Items.GetItemsSchema()
+            };
+        }
     }
 }

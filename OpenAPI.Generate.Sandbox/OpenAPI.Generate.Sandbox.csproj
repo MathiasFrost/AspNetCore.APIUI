@@ -4,11 +4,10 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<RootNamespace>OpenAPI.Generate</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\OpenAPI.Generate\OpenAPI.Generate.csproj"/>
+		<ProjectReference Include="..\OpenAPI.Generate\OpenAPI.Generate.csproj" />
 	</ItemGroup>
 
 </Project>

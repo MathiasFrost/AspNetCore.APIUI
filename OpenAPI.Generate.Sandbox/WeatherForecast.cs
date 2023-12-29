@@ -1,4 +1,4 @@
-namespace OpenAPI.Generate;
+namespace OpenAPI.Generate.Sandbox;
 
 public class WeatherForecast
 {
