@@ -5,6 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<OutputType>library</OutputType>
+		<IsPackable>true</IsPackable> 
 
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -43,7 +44,11 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <_ContentIncludedByDefault Remove="Resources\_app\version.json" />
+	  <Folder Include="Resources\_app\immutable\assets\" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Content Remove="Resources\_app\version.json" />
 	</ItemGroup>
 
 </Project>

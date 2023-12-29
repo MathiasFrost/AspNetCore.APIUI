@@ -175,7 +175,7 @@ internal static class OpenApiTypeHelper
         {
             contentType = "application/json";
             definition = new SchemaDefinition("object", "tuple");
-            properties = items!.ToDictionary(static info => info.Name, info =>
+            properties = items!.ToDictionary(static info => info.Name, static info =>
             {
                 SchemaDefinition? def = GetSchemaDefinition(info.FieldType);
                 return new Property {
@@ -344,7 +344,7 @@ internal static class OpenApiTypeHelper
         else if (template.EndsWith('/')) @base = template + methodTemplate;
         else @base = $"{template}/{methodTemplate}";
 
-        string res = replacements.Aggregate(@base, (current, pair) => current.Replace(pair.Key, pair.Value));
+        string res = replacements.Aggregate(@base, static (current, pair) => current.Replace(pair.Key, pair.Value));
         return res.StartsWith('/') ? res : "/" + res;
     }
 
@@ -511,6 +511,7 @@ internal static class OpenApiTypeHelper
         SchemaDefinition? AdditionalProperties = null,
         bool IsDynamic = false)
     {
+        /// <summary> TODOC </summary>
         public JsonNode? GetAdditionalProperties()
         {
             if (AdditionalProperties == null) return null;
@@ -519,6 +520,7 @@ internal static class OpenApiTypeHelper
             return JsonNode.Parse($"{{\"type\": \"{AdditionalProperties.Type}\"{format}}}");
         }
 
+        /// <summary> TODOC </summary>
         public Schema? GetItemsSchema()
         {
             if (Items == null) return null;
